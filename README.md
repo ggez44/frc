@@ -43,8 +43,8 @@ updated version that uses TBA's api instead, and uses the same algorithm as the 
 i left my TBA api key is in the file, better if you go get your own (it's free), 
 
 ### Usage
-ruby rankings.rb 2024cabe
-ruby rankings.rb 2024cafr
+- ruby rankings.rb 2024cabe
+- ruby rankings.rb 2024cafr
 
 ### Notes
 This version has 3 options..
