@@ -8,38 +8,48 @@ can ignore.. was an attempt at coming up with better schedules for quals, but di
 ## rankings_old.rb
 old version where you can just cut&paste results from thebluealliance event page, and it'll find the Estimated Point Share.
 
-To explain the algorithm a bit:
-    match 1: 90 points - team1, team2, team3 
-    match 2: 70 points - team4, team5, team6 
-    match 3: 80 points - team1, team5, team6
-    match 4: ... 
+### Algorithm Explanation:
 
-we run iterations.. 
-first iteration: 
-    team1,2,3 all get equal shares of the 90 points from match 1 (30 each)
-    team4,5,6 all get equal shares of the 60 points from match 2 (20 each)
-    etc
+We run multiple iterations to distribute points among teams based on their performance in matches. Here's a breakdown of how the algorithm processes the data:
 
-assume at the end of the iteration: team1 is at 35points, team2 is at 30points, team3 is at 20points
+#### Initial Setup:
+- **Match 1:** 90 points - Team1, Team2, Team3
+- **Match 2:** 70 points - Team4, Team5, Team6
+- **Match 3:** 80 points - Team1, Team5, Team6
+- **Match 4:** ...
 
-2nd iteration: 
-    team1 gets 35/(35+30+20) points of 90 points for match 1
-    team2 gets 30/(35+30+20) points
-    team3 gets 20(35+30+20) points
+#### Iterations:
 
-we iterated 50 times and the percent shares will stabilize
+##### First Iteration:
+- **Team1, Team2, Team3** all receive equal shares of the 90 points from Match 1, which is 30 each.
+- **Team4, Team5, Team6** all receive equal shares of the 70 points from Match 2, which is about 23.33 each.
+
+Assuming at the end of this iteration, the points are as follows:
+- **Team1:** 35 points
+- **Team2:** 30 points
+- **Team3:** 20 points
+
+##### Second Iteration:
+- **Team1** receives \( \frac{35}{35+30+20} \) of the 90 points from Match 1.
+- **Team2** receives \( \frac{30}{35+30+20} \) of the 90 points.
+- **Team3** receives \( \frac{20}{35+30+20} \) of the 90 points.
+
+#### Stabilization:
+We iterate this process 50 times. After multiple iterations, the percentage shares of points among the teams will stabilize.
+
+This method ensures that points are allocated based on both the initial equal distribution and adjusted according to performance in subsequent rounds.
 
 
 ## rankings.rb
 updated version that uses TBA's api instead.
 this allows the algorithm to subtract out penalty points from the total score to be more accurate of offensive contribution
 
-this version has 3 options.. ("ruby rankings.rb 2024cabe")
-1 points share except this is able to subtract out penalty points to be more accurate 
--- this is mostly aligned with opr, but much better at dealing with fewer matches played
--- this is mostly aligned with epa in terms of results
-2 foul points contributed.. same algorithm but looking at how many points the opposing alliance received.  So if a team got a "6.4"
-it means that on average, they gave up 6.4 points worth of penalities to the other alliance.
--- note: thebluealliance insights tab has foul points, but it's based on what your own alliance received for points which is meaningless
-3 climb percentage.. TBA api gives us who climbed, so this is not an approximation, but rather an exact percentage of how often a team successfully climbed.
-this ignores "park"
+This version has 3 options.. ("ruby rankings.rb 2024cabe")
+
+1. **Points Share** - This is able to subtract out penalty points to be more accurate.
+   - This is mostly aligned with OPR, but much better at dealing with fewer matches played.
+   - This is mostly aligned with EPA in terms of results.
+2. **Foul Points Contributed** - Same algorithm but looking at how many points the opposing alliance received. So if a team got a "6.4", it means that on average, they gave up 6.4 points worth of penalties to the other alliance.
+   - Note: The Blue Alliance insights tab has foul points, but it's based on what your own alliance received for points which is meaningless.
+3. **Climb Percentage** - The TBA API gives us who climbed, so this is not an approximation, but rather an exact percentage of how often a team successfully climbed. This ignores "park".
+
