@@ -61,6 +61,12 @@ This version has 3 options..
    - Note: The Blue Alliance insights tab has foul points, but it's based on what your own alliance received for points which is meaningless.
 3. **Climb Percentage** - The TBA API gives us who climbed, so this is not an approximation, but rather an exact percentage of how often a team successfully climbed. This ignores "park".
 
+### Other ideas
+1. Can easily do shares of Auto/Teleop/Endgame points, but won't be too different from what statbotics/epa has already
+2. Can see where on the stage people climbed, but this doesn't seem useful
+3. Can see who can get the 2-pt mobility in auto, but not sure that's too useful
+4. A lot more complicated, but based on the calculated Point Share, we can go back to the match data again and see how the other alliance did compared to their expected.. this might give us Defense Efficiency
+
 ### Available data from TBA match api
 ```
     {"adjustPoints"=>0,
