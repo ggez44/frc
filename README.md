@@ -42,7 +42,12 @@ We iterate this process 50 times. After multiple iterations, the percentage shar
 updated version that uses TBA's api instead, and uses the same algorithm as the \_old version
 i left my TBA api key is in the file, better if you go get your own (it's free), 
 
-This version has 3 options.. ("ruby rankings.rb 2024cabe")
+### Usage
+ruby rankings.rb 2024cabe
+ruby rankings.rb 2024cafr
+
+### Notes
+This version has 3 options..
 
 1. **Points Share** - This is able to subtract out penalty points to be more accurate.
    - This is mostly aligned with OPR, but much better at dealing with fewer matches played.
