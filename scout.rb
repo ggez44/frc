@@ -435,25 +435,8 @@ def run_menu
   end
 end
 
-#run_menu
+run_menu
 #process_event("2023camb")
 #process_event("2023cur")
 
 
-  events = query("events/2023")
-  weeks = events.reject{|x| x["week"].nil?}.group_by {|event| event["week"]}
-  weeks.keys.sort.reverse.each do |week|
-    # start with last week
-    weeks[week].each do |event|
-      event_teams = query("event/#{event["key"]}/teams/keys")
-      next if event_teams.count % 6 != 1
-      puts "event: #{event["key"]} has #{event_teams.count} teams"
-
-      #team_results = process_event(event["key"])
-      #next if team_results.empty?
-
-      #teams = merge_team_results(teams, team_results)
-    end
-
-    break if week.to_i < 3 # for testing
-  end
