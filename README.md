@@ -12,7 +12,7 @@ old version where you can just cut&paste results from thebluealliance event page
 
 We run multiple iterations to distribute points among teams based on their performance in matches. Here's a breakdown of how the algorithm processes the data:
 
-#### Initial Setup:
+#### Match Data:
 - **Match 1:** 90 points - Team1, Team2, Team3
 - **Match 2:** 70 points - Team4, Team5, Team6
 - **Match 3:** 80 points - Team1, Team5, Team6
@@ -30,19 +30,16 @@ Assuming at the end of this iteration, the points are as follows:
 - **Team3:** 20 points
 
 ##### Second Iteration:
-- **Team1** receives \( \frac{35}{35+30+20} \) of the 90 points from Match 1.
-- **Team2** receives \( \frac{30}{35+30+20} \) of the 90 points.
-- **Team3** receives \( \frac{20}{35+30+20} \) of the 90 points.
+- **Team1** receives \(35/(35+30+20)\) of the 90 points from Match 1.
+- **Team2** receives \(30/(35+30+20)\) of the 90 points.
+- **Team3** receives \(20/(35+30+20)\) of the 90 points.
 
 #### Stabilization:
 We iterate this process 50 times. After multiple iterations, the percentage shares of points among the teams will stabilize.
 
-This method ensures that points are allocated based on both the initial equal distribution and adjusted according to performance in subsequent rounds.
-
 
 ## rankings.rb
-updated version that uses TBA's api instead.
-this allows the algorithm to subtract out penalty points from the total score to be more accurate of offensive contribution
+updated version that uses TBA's api instead, and uses the same algorithm as the \_old version
 
 This version has 3 options.. ("ruby rankings.rb 2024cabe")
 
