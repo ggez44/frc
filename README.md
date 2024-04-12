@@ -49,9 +49,9 @@ We iterate this process 50 times. After multiple iterations, the percentage shar
 
 ### Usage
 - `ruby rankings.rb 2024cabe`
-  > shows stats for 2024cabe teams and how they did in 2024cabe matches
+  - shows stats for 2024cabe teams and how they did in 2024cabe matches
 - `ruby rankings.rb 2024hop prev`
-  > shows stats for 2024hop teams and how each did in their latest event
+  - shows stats for 2024hop teams and how each did in their latest event
 
 ### Notes
 This version has 3 options..
