@@ -37,7 +37,6 @@ def run_event(event_key, stat)
   if File.exists?(cache_file_name)
     matches = File.open(cache_file_name) { |f| JSON.load(f) }
   else
-    print(".")
     event = query("event/#{event_key}")
     event_end_date = Date.parse(event["end_date"])
     days_diff = (Date.today - event_end_date).to_i
@@ -60,7 +59,7 @@ def run_event(event_key, stat)
   if File.exists?(cache_file_name)
     return File.open(cache_file_name) { |f| JSON.load(f) }
   else
-    print("s")
+    print(".")
     if stat == "climb"
       team_scores = run_climb(matches)
     else
@@ -182,24 +181,30 @@ def pprint(team_scores)
   idx = 0
 
   puts "\n==================="
+  if team_scores.length == 0
+    puts "No data yet"
+  end
   team_scores.sort_by { |team, score| score["score"] }.reverse.each do |team, score|
     puts "#{idx+=1}. #{team} - #{score["score"].round(2)}"
   end
 end
 
 def display_menu()
-  puts ""
-  puts "###################################################################"
+  puts "\n\n"
+  puts "###################################################################\n#"
   if ARGV[1].nil?
-    puts "# Stats for #{ARGV[0]} teams using #{ARGV[0]} matches"
+    puts "#     Stats for #{ARGV[0]} teams using #{ARGV[0]} matches"
   else
-    puts "# Stats for #{ARGV[0]} teams using teams' latest event matches"
+    puts "#     Stats for #{ARGV[0]} teams using teams' latest event matches"
   end
-  puts "###################################################################"
+  puts "#\n###################################################################"
+  puts "\n"
   puts "1) Estimated Points Share (sans fouls)"
   puts "2) Estimated Penalty Points Share (more is bad)"
   puts "3) Successful Climb Percentage (exact)"
-  puts "q) quit"
+  puts ""
+  puts "[c]lear cache"
+  puts "[q]uit"
   puts ""
   print "Enter choice: "
 end
@@ -227,10 +232,13 @@ def handle_choice(choice)
     else
       pprint(run_event(ARGV[0], "climb"))
     end
+  when "c"
+    FileUtils.rm_rf("cache")
   end
 end
 
 def run_menu()
+  FileUtils.mkdir_p("cache")
   choice = ''
   until choice == 'q'
     display_menu()
@@ -258,7 +266,6 @@ def get_teams_last_event()
     print('.')
   end
 
-  FileUtils.mkdir_p("cache")
   File.open(cache_file_name, "w") do |file|
     JSON.dump(team_last_event_map, file)
   end
