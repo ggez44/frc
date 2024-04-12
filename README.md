@@ -6,7 +6,9 @@ but this looked at all events and did global rankings and stuff.
 can ignore.. was an attempt at coming up with better schedules for quals, but didn't get very far
 
 # rankings_old.rb
-old version where you can just cut&paste results from thebluealliance event page, and it'll find the Estimated Point Share.
+- old version where you just cut&paste results from thebluealliance event page (before i found out about TBA api. 
+- this script finds Estimated Point Share.
+- similar to OPR/EPA, but definitely better than OPR (for fewer match data)
 
 <details> 
   <summary>Algorithm Explanation</summary>
