@@ -1,11 +1,11 @@
-## scout.rb
+# scout.rb
 not maintained, has 2023 stuff (probably won't work for 2024)
 but this looked at all events and did global rankings and stuff.
 
-## schedule.rb
+# schedule.rb
 can ignore.. was an attempt at coming up with better schedules for quals, but didn't get very far
 
-## rankings_old.rb
+# rankings_old.rb
 old version where you can just cut&paste results from thebluealliance event page, and it'll find the Estimated Point Share.
 
 <details> 
@@ -44,7 +44,7 @@ Assuming at the end of this iteration, the points are as follows:
 We iterate this process 50 times. After multiple iterations, the percentage shares of points among the teams will stabilize.
 </details>
 
-## rankings.rb
+# rankings.rb
 - updated version that uses TBA's api instead, and uses the same algorithm as the \_old version
 - i left my TBA api key is in the file, better if you go get your own (it's free), 
 
