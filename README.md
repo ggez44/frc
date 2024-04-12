@@ -48,10 +48,10 @@ We iterate this process 50 times. After multiple iterations, the percentage shar
 - i left my TBA api key is in the file, better if you go get your own (it's free), 
 
 ### Usage
-- ruby rankings.rb 2024cabe 
--- shows stats for 2024cabe teams and how they did in 2024cabe matches
-- ruby rankings.rb 2024hop prev
--- shows stats for 2024hop teams and how each did in their latest event
+- `ruby rankings.rb 2024cabe`
+  > shows stats for 2024cabe teams and how they did in 2024cabe matches
+- `ruby rankings.rb 2024hop prev`
+  > shows stats for 2024hop teams and how each did in their latest event
 
 ### Notes
 This version has 3 options..
