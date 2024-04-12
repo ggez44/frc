@@ -54,6 +54,8 @@ We iterate this process 50 times. After multiple iterations, the percentage shar
   - shows stats for 2024hop teams and how each did in their latest event matches
 - `ruby rankings.rb 2024cur`
   - shows stats for how teams are doing in Curie Division (no data yet)
+- `ruby rankings.rb 2024cafr prev`
+  - technically possible to see how the teams of SFR did in their last completed event
 
 ### Notes
 This version has 3 options..
