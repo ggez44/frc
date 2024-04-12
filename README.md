@@ -46,7 +46,7 @@ We iterate this process 50 times. After multiple iterations, the percentage shar
 
 # rankings.rb
 - updated version that uses TBA's api instead, and uses the same algorithm as the \_old version
-- i left my TBA api key is in the file, better if you go get your own (it's free), 
+- i left my TBA api key is in the file for convenience, better if you go get your own (it's free) 
 
 ### Usage
 - `ruby rankings.rb 2024cabe`
