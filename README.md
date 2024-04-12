@@ -8,7 +8,8 @@ can ignore.. was an attempt at coming up with better schedules for quals, but di
 ## rankings_old.rb
 old version where you can just cut&paste results from thebluealliance event page, and it'll find the Estimated Point Share.
 
-### Algorithm Explanation:
+<details> 
+  <summary>Algorithm Explanation</summary>
 
 We run multiple iterations to distribute points among teams based on their performance in matches. Here's a breakdown of how the algorithm processes the data:
 
@@ -41,7 +42,7 @@ Assuming at the end of this iteration, the points are as follows:
 
 #### Stabilization:
 We iterate this process 50 times. After multiple iterations, the percentage shares of points among the teams will stabilize.
-
+</details>
 
 ## rankings.rb
 - updated version that uses TBA's api instead, and uses the same algorithm as the \_old version
