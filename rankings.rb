@@ -160,10 +160,6 @@ def run_iteration(stat, team_scores, matches)
     iteration_team_scores[team5]["score"] += alliance2_percentages[1] * red_score.to_i
     iteration_team_scores[team6]["score"] += alliance2_percentages[2] * red_score.to_i
 
-    if [team1, team2, team3, team4, team5, team6].include?("6238")
-      #byebug
-    end
-
     [team1, team2, team3, team4, team5, team6].each do |team|
       iteration_team_scores[team]["matches"] += 1
     end
@@ -177,15 +173,61 @@ def run_iteration(stat, team_scores, matches)
   team_scores
 end
 
+def get_teams_last_event()
+  cache_file_name = "cache/last_event_cache_#{ARGV[0]}.json"
+  if File.exists?(cache_file_name)
+    puts "Using cached last_event data"
+    return File.open(cache_file_name) { |f| JSON.load(f) }
+  end
+
+  team_keys = get_team_keys()
+
+  team_last_event_map = {}
+  team_keys.each do |team_key|
+    matches = query("team/#{team_key}/matches/2024")
+    filtered_matches = matches.select { |match| match["actual_time"] }
+    most_recent_match = filtered_matches.max_by { |match| match["actual_time"] }
+    team_last_event_map[team_key] = most_recent_match["event_key"]
+    #puts "#{team_key}: #{most_recent_match['event_key']}"
+    print('.')
+  end
+
+  File.open(cache_file_name, "w") do |file|
+    JSON.dump(team_last_event_map, file)
+  end
+
+  return team_last_event_map
+end
+
+def get_team_keys()
+  teams = query("event/#{ARGV[0]}/teams")
+  return teams.map{ |team| team["key"] }
+end
+
+def get_prev_teams_stats(stat)
+  team_last_events = get_teams_last_event()
+
+  team_results = {}
+
+  team_last_events.each do |team_key, event_key|
+    team_number = team_key.sub('frc', '')
+    event_results = run_event(event_key, stat)
+    team_results[team_number] = event_results[team_number]
+  end
+
+  return team_results
+end
+
 def pprint(team_scores)
   idx = 0
 
   puts "\n==================="
   if team_scores.length == 0
     puts "No data yet"
-  end
-  team_scores.sort_by { |team, score| score["score"] }.reverse.each do |team, score|
-    puts "#{idx+=1}. #{team} - #{score["score"].round(2)}"
+  else
+    team_scores.sort_by { |team, score| score["score"] }.reverse.each do |team, score|
+      puts "#{idx+=1}. #{team} - #{score["score"].round(2)}"
+    end
   end
 end
 
@@ -246,51 +288,6 @@ def run_menu()
     choice = STDIN.gets.chomp
     handle_choice(choice)
   end
-end
-
-def get_teams_last_event()
-  cache_file_name = "cache/last_event_cache_#{ARGV[0]}.json"
-  if File.exists?(cache_file_name)
-    puts "Using cached last_event data"
-    return File.open(cache_file_name) { |f| JSON.load(f) }
-  end
-
-  team_keys = get_team_keys()
-
-  team_last_event_map = {}
-  team_keys.each do |team_key|
-    matches = query("team/#{team_key}/matches/2024")
-    filtered_matches = matches.select { |match| match["actual_time"] }
-    most_recent_match = filtered_matches.max_by { |match| match["actual_time"] }
-    team_last_event_map[team_key] = most_recent_match["event_key"]
-    #puts "#{team_key}: #{most_recent_match['event_key']}"
-    print('.')
-  end
-
-  File.open(cache_file_name, "w") do |file|
-    JSON.dump(team_last_event_map, file)
-  end
-
-  return team_last_event_map
-end
-
-def get_team_keys()
-  teams = query("event/#{ARGV[0]}/teams")
-  return teams.map{ |team| team["key"] }
-end
-
-def get_prev_teams_stats(stat)
-  team_last_events = get_teams_last_event()
-
-  team_results = {}
-
-  team_last_events.each do |team_key, event_key|
-    team_number = team_key.sub('frc', '')
-    event_results = run_event(event_key, stat)
-    team_results[team_number] = event_results[team_number]
-  end
-
-  return team_results
 end
 
 run_menu()
