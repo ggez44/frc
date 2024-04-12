@@ -234,6 +234,7 @@ def handle_choice(choice)
     end
   when "c"
     FileUtils.rm_rf("cache")
+    FileUtils.mkdir_p("cache")
   end
 end
 
