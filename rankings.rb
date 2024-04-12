@@ -1,3 +1,4 @@
+require 'date'
 require 'fileutils'
 require 'uri'
 require 'net/http'
@@ -29,6 +30,7 @@ def run_event(event_key, stat)
       raise "No event key"
   end
 
+  cacheable_event = true
   #puts("checking #{event_key}")
 
   cache_file_name = "cache/event_cache_#{event_key}.json"
@@ -36,9 +38,19 @@ def run_event(event_key, stat)
     matches = File.open(cache_file_name) { |f| JSON.load(f) }
   else
     print(".")
+    event = query("event/#{event_key}")
+    event_end_date = Date.parse(event["end_date"])
+    days_diff = (Date.today - event_end_date).to_i
+    if days_diff < 2
+      cacheable_event = false
+    end
+      
     matches = query("event/#{event_key}/matches")
-    File.open(cache_file_name, "w") do |file|
-     JSON.dump(matches, file)
+    if cacheable_event
+      # only cache done events
+      File.open(cache_file_name, "w") do |file|
+        JSON.dump(matches, file)
+      end
     end
   end
 
@@ -58,8 +70,10 @@ def run_event(event_key, stat)
       end
     end
 
-    File.open(cache_file_name, "w") do |file|
-      JSON.dump(team_scores, file)
+    if cacheable_event
+      File.open(cache_file_name, "w") do |file|
+        JSON.dump(team_scores, file)
+      end
     end
   end
 
