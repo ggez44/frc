@@ -24,38 +24,60 @@ def query(path, params = {})
   end
 end
 
-
-def run_event(event_key, stat)
-  if !event_key
-      raise "No event key"
+def get_event(event_key)
+  cache_file_name = "cache/event_meta_cache_#{event_key}.json"
+  if File.exists?(cache_file_name)
+    event = File.open(cache_file_name) { |f| JSON.load(f) }
+  else
+    event = query("event/#{event_key}")
   end
 
-  cacheable_event = true
-  #puts("checking #{event_key}")
+  if is_event_cacheable(event)
+    File.open(cache_file_name, "w") do |file|
+      JSON.dump(event, file)
+    end
+  end
 
-  cache_file_name = "cache/event_cache_#{event_key}.json"
+  return event
+end
+
+def get_event_matches(event_key)
+  cache_file_name = "cache/event_matches_cache_#{event_key}.json"
   if File.exists?(cache_file_name)
     matches = File.open(cache_file_name) { |f| JSON.load(f) }
   else
-    event = query("event/#{event_key}")
-    event_end_date = Date.parse(event["end_date"])
-    days_diff = (Date.today - event_end_date).to_i
-    if days_diff < 2
-      cacheable_event = false
-    end
-      
     matches = query("event/#{event_key}/matches")
-    if cacheable_event
-      # only cache done events
+
+    event = get_event(event_key)
+    if is_event_cacheable(event)
       File.open(cache_file_name, "w") do |file|
         JSON.dump(matches, file)
       end
     end
   end
 
+  return matches
+end
+
+def is_event_cacheable(event)
+  # only cache done events
+  event_end_date = Date.parse(event["end_date"])
+  days_diff = (Date.today - event_end_date).to_i
+
+  return days_diff > 2
+end
+
+def run_event(event_key, stat)
+  if !event_key
+      raise "No event key"
+  end
+
+  event = get_event(event_key)
+  matches = get_event_matches(event_key)
+
   team_scores = {}
 
-  cache_file_name = "cache/event_cache_#{event_key}_#{stat}.json"
+  cache_file_name = "cache/event_stat_cache_#{event_key}_#{stat}.json"
   if File.exists?(cache_file_name)
     return File.open(cache_file_name) { |f| JSON.load(f) }
   else
@@ -67,9 +89,15 @@ def run_event(event_key, stat)
         team_scores = run_iteration(stat, team_scores, matches)
         #pprint(team_scores)
       end
+
+      if stat == "eps_v_comp"
+        team_scores.each do |team_key, score_hash|
+          score_hash["score"] -= get_avg_eps_for_week(event["week"])
+        end
+      end
     end
 
-    if cacheable_event
+    if is_event_cacheable(event)
       File.open(cache_file_name, "w") do |file|
         JSON.dump(team_scores, file)
       end
@@ -124,7 +152,7 @@ def run_iteration(stat, team_scores, matches)
     team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
       
     case stat
-    when "eps"
+    when "eps", 'eps_v_comp'
       blue_score = match["score_breakdown"]["blue"]["totalPoints"]
       red_score = match["score_breakdown"]["red"]["totalPoints"]
     when "epps" 
@@ -218,6 +246,31 @@ def get_prev_teams_stats(stat)
   return team_results
 end
 
+# repopulate this cache each run
+WEEKLY_AVG_EPS_CACHE = {}
+def get_avg_eps_for_week(week_num)
+  if WEEKLY_AVG_EPS_CACHE[week_num]
+    return WEEKLY_AVG_EPS_CACHE[week_num]
+  end
+
+  event_averages = []
+  events = query("events/2024")
+  events.each do |event|
+    next if event["week"].nil?
+    next if event["week"].to_i != week_num.to_i
+
+    event_results = run_event(event["key"], "eps")
+    scores = event_results.values.map { |team| team["score"] }
+    total_score = scores.sum
+    average_score = total_score / scores.size
+    event_averages.append(average_score)
+  end
+
+  average_eps = event_averages.sum / event_averages.count
+  WEEKLY_AVG_EPS_CACHE[week_num] = average_eps
+  return average_eps
+end
+
 def pprint(team_scores)
   idx = 0
 
@@ -242,8 +295,9 @@ def display_menu()
   puts "#\n###################################################################"
   puts "\n"
   puts "1) Estimated Points Share (sans fouls)"
-  puts "2) Estimated Penalty Points Share (more is bad)"
-  puts "3) Successful Climb Percentage (exact)"
+  puts "2) EPS vs Week Comp"
+  puts "3) Estimated Penalty Points Share (more is bad)"
+  puts "4) Successful Climb Percentage (exact)"
   puts ""
   puts "[c]lear cache"
   puts "[q]uit"
@@ -264,11 +318,17 @@ def handle_choice(choice)
     end
   when "2"
     if use_prev_event_data
+      pprint(get_prev_teams_stats("eps_v_comp"))
+    else
+      pprint(run_event(ARGV[0], "eps_v_comp"))
+    end
+  when "3"
+    if use_prev_event_data
       pprint(get_prev_teams_stats("epps"))
     else
       pprint(run_event(ARGV[0], "epps"))
     end
-  when "3"
+  when "4"
     if use_prev_event_data
       pprint(get_prev_teams_stats("climb"))
     else

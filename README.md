@@ -63,12 +63,13 @@ We iterate this process 50 times. After multiple iterations, the percentage shar
 ### Notes
 This version has 3 options..
 
-1. **Points Share** - This is able to subtract out penalty points to be more accurate.
+1. **Estimated Points Share** - This is able to subtract out penalty points to be more accurate.
    - This is mostly aligned with OPR, but much better at dealing with fewer matches played.
    - This is mostly aligned with EPA in terms of results.
-2. **Foul Points Contributed** - Same algorithm but looking at how many foul points the opposing alliance received. So if a team got a "6.4", it means that on average, they gave up 6.4 points worth of penalties to the other alliance.
+2. **EPS vs Week Comp** - This looks at your EPS and subtracts out the FRC averarge EPS for that week.  Ths is to better account for teams that did not play a late season event.  This isn't perfect though as week 6 saw many Championships that artificially raised this average by a lot.
+3. **Estimated Penalty Points Share** - Same algorithm but looking at how many foul points the opposing alliance received. So if a team got a "6.4", it means that on average, they gave up 6.4 points worth of penalties to the other alliance.
    - Note: The Blue Alliance insights tab has foul points, but it's based on what your own alliance received for points which is meaningless.
-3. **Climb Percentage** - The TBA API gives us who climbed, so this is not an approximation, but rather an exact percentage of how often a team successfully climbed. This ignores "park".
+4. **Climb Percentage** - The TBA API gives us who climbed, so this is not an approximation, but rather an exact percentage of how often a team successfully climbed. This ignores "park".
 
 ### Other ideas
 1. Can easily do shares of Auto/Teleop/Endgame points, but won't be too different from what statbotics/epa has already
