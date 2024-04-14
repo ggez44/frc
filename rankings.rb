@@ -84,6 +84,8 @@ def run_event(event_key, stat)
     print(".")
     if stat == "climb"
       team_scores = run_climb(matches)
+    elsif stat == "amplified_note_ratio"
+      team_scores = run_amplified_note_ratio(event_key)
     else
       50.times do
         team_scores = run_iteration(stat, team_scores, matches)
@@ -105,6 +107,18 @@ def run_event(event_key, stat)
   end
 
   return team_scores
+end
+
+def run_amplified_note_ratio(event_key)
+  amplified_note_scores = run_event(event_key, "amplified_notes")
+  unamplified_note_scores = run_event(event_key, "unamplified_notes")
+
+  result_scores = {}
+  amplified_note_scores.each do |team, score_hash|
+    result_scores[team] = {"score" => amplified_note_scores[team]["score"] / unamplified_note_scores[team]["score"]}
+  end
+
+  return result_scores
 end
 
 def run_climb(matches)
@@ -150,11 +164,33 @@ def run_iteration(stat, team_scores, matches)
 
     team1, team2, team3 = match["alliances"]["blue"]["team_keys"].map { |key| key.sub('frc', '') }
     team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
+
+    blue_score = 0
+    red_score = 0
       
     case stat
     when "eps", 'eps_v_comp'
       blue_score = match["score_breakdown"]["blue"]["totalPoints"]
       red_score = match["score_breakdown"]["red"]["totalPoints"]
+    when "total_notes"
+      keys_to_sum = ["autoAmpNoteCount", "autoSpeakerNoteCount", "teleopAmpNoteCount", "teleopSpeakerNoteAmplifiedCount", "teleopSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
+    when "auto_notes"
+      keys_to_sum = ["autoAmpNoteCount", "autoSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
+    when "teleop_notes"
+      keys_to_sum = ["teleopAmpNoteCount", "teleopSpeakerNoteAmplifiedCount", "teleopSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
+    when "amplified_notes"
+      blue_score = match["score_breakdown"]["blue"]["teleopSpeakerNoteAmplifiedCount"]
+      red_score = match["score_breakdown"]["red"]["teleopSpeakerNoteAmplifiedCount"]
+    when "unamplified_notes"
+      keys_to_sum = ["teleopAmpNoteCount", "teleopSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
     when "epps" 
       # look at opponent alliance foulPoints - TBA looks at own alliance which is meaningless
       blue_score = match["score_breakdown"]["red"]["foulPoints"]
@@ -296,45 +332,77 @@ def display_menu()
   puts "\n"
   puts "1) Estimated Points Share (sans fouls)"
   puts "2) EPS vs Week Comp"
-  puts "3) Estimated Penalty Points Share (more is bad)"
-  puts "4) Successful Climb Percentage (exact)"
+  puts "3) Total Notes"
+  puts "4) Auto Notes"
+  puts "5) Teleop Notes"
+  puts "6) Amplified Note Ratio (amped speaker:unamped+amp)"
+  puts "7) Estimated Penalty Points Share (more is bad)"
+  puts "8) Successful Climb Percentage (exact)"
+  puts "9) Match Num Pieces Forecast"
+  puts "a) Match Score Forecast"
   puts ""
-  puts "[c]lear cache"
+  puts "[x]lear cache"
   puts "[q]uit"
   puts ""
   print "Enter choice: "
+end
+
+def run_match_forecast(event_key, team_scores)
+  matches = get_event_matches(event_key)
+  matches.each do |match|
+    next if !match['actual_time']
+
+    team1, team2, team3 = match["alliances"]["blue"]["team_keys"].map { |key| key.sub('frc', '') }
+    team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
+
+    blue_total = (team_scores[team1]["score"] + team_scores[team2]["score"] + team_scores[team3]["score"]).round()
+    red_total = (team_scores[team4]["score"] + team_scores[team5]["score"] + team_scores[team6]["score"]).round()
+
+    puts "#{match["key"]}:   \t #{red_total} \t- #{blue_total}     \t(#{team4} #{team5} #{team6}) - (#{team1} #{team2} #{team3})"
+  end
 end
 
 def handle_choice(choice)
   # if there is a second command line arg of any kind.. we use prev event
   use_prev_event_data = !ARGV[1].nil?
 
+  choice_map = {
+    "1" => "eps",
+    "2" => "eps_v_comp",
+    "3" => "total_notes",
+    "4" => "auto_notes",
+    "5" => "teleop_notes",
+    "6" => "amplified_note_ratio",
+    "7" => "epps",
+    "8" => "climb",
+  }
+
+  event_key = ARGV[0]
+
   case choice
-  when "1"
+  when "1", "2", "3", "4", "5", "6", "7", "8"
     if use_prev_event_data
-      pprint(get_prev_teams_stats("eps"))
+      pprint(get_prev_teams_stats(choice_map[choice]))
     else
-      pprint(run_event(ARGV[0], "eps"))
+      pprint(run_event(event_key, choice_map[choice]))
     end
-  when "2"
+  when "9"
     if use_prev_event_data
-      pprint(get_prev_teams_stats("eps_v_comp"))
+      total_note_scores = get_prev_teams_stats("total_notes")
     else
-      pprint(run_event(ARGV[0], "eps_v_comp"))
+      total_note_scores = run_event(event_key, "total_notes")
     end
-  when "3"
+
+    run_match_forecast(event_key, total_note_scores)
+  when "a"
     if use_prev_event_data
-      pprint(get_prev_teams_stats("epps"))
+      eps_scores = get_prev_teams_stats("eps")
     else
-      pprint(run_event(ARGV[0], "epps"))
+      eps_scores = run_event(event_key, "eps")
     end
-  when "4"
-    if use_prev_event_data
-      pprint(get_prev_teams_stats("climb"))
-    else
-      pprint(run_event(ARGV[0], "climb"))
-    end
-  when "c"
+
+    run_match_forecast(event_key, eps_scores)
+  when "x"
     FileUtils.rm_rf("cache")
     FileUtils.mkdir_p("cache")
   end

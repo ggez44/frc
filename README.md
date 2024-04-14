@@ -63,13 +63,37 @@ We iterate this process 50 times. After multiple iterations, the percentage shar
 ### Notes
 This version has 3 options..
 
-1. **Estimated Points Share** - This is able to subtract out penalty points to be more accurate.
+  puts "1) Estimated Points Share (sans fouls)"
+  puts "2) EPS vs Week Comp"
+  puts "3) Total Notes"
+  puts "4) Auto Notes"
+  puts "5) Teleop Notes"
+  puts "6) Amplified Note Ratio (amped speaker:unamped+amp)"
+  puts "7) Estimated Penalty Points Share (more is bad)"
+  puts "8) Successful Climb Percentage (exact)"
+  puts "9) Match Num Pieces Forecast"
+  puts "a) Match Score Forecast"
+
+1. **Estimated Points Share** 
+   - Penalty points are removed
    - This is mostly aligned with OPR, but much better at dealing with fewer matches played.
    - This is mostly aligned with EPA in terms of results.
 2. **EPS vs Week Comp** - This looks at your EPS and subtracts out the FRC averarge EPS for that week.  Ths is to better account for teams that did not play a late season event.  This isn't perfect though as week 6 saw many Championships that artificially raised this average by a lot.
-3. **Estimated Penalty Points Share** - Same algorithm but looking at how many foul points the opposing alliance received. So if a team got a "6.4", it means that on average, they gave up 6.4 points worth of penalties to the other alliance.
+3. **Total Notes** - auto + teleop notes
+4. **Auto Notes**
+5. **Teleop Notes**
+6. **Amplified Note Ratio** - number of amplified speaker notes / (amp notes + unamplified speaker notes)
+   - a measure of how efficient the team scores
+   - ideally this is 2 max (never score unamped speaker, and score 4 amped speaker for every 2 amp), however, due to estimations, some teams can get a ratio of over 2 here.
+   - low ratio means the robot likely has a hgher ceiling after some tactical adjustments
+7. **Estimated Penalty Points Share** - Same algorithm but looking at how many foul points the opposing alliance received. So if a team got a "6.4", it means that on average, they gave up 6.4 points worth of penalties to the other alliance.
    - Note: The Blue Alliance insights tab has foul points, but it's based on what your own alliance received for points which is meaningless.
-4. **Climb Percentage** - The TBA API gives us who climbed, so this is not an approximation, but rather an exact percentage of how often a team successfully climbed. This ignores "park".
+8. **Climb Percentage** - The TBA API gives us who climbed, so this is not an approximation, but rather an exact percentage of how often a team successfully climbed. This ignores "park".
+9. **Match Num Pieces Forecast** - looks a schedule and estimates the total notes count.
+   - once Hopper schedule is released, you can do "ruby rankings.rb 2024hop prev"
+   - you can also try "ruby rankings.rb 2024cabe"
+   - this might be useful info in determining if we want to ask for coopertition
+a. **Match Score Forecast** - similar to what statbotics does (except they use epa)
 
 ### Other ideas
 1. Can easily do shares of Auto/Teleop/Endgame points, but won't be too different from what statbotics/epa has already
