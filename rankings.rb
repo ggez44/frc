@@ -67,6 +67,25 @@ def is_event_cacheable(event)
   return days_diff > 2
 end
 
+def get_stats(event_key, stat, use_prev_event_data)
+  if !use_prev_event_data
+    return run_event(event_key, stat)
+  end
+
+  # get data from prev event instead
+  team_last_events = get_teams_last_event(event_key)
+
+  team_results = {}
+
+  team_last_events.each do |team_key, event_key|
+    team_number = team_key.sub('frc', '')
+    event_results = run_event(event_key, stat)
+    team_results[team_number] = event_results[team_number]
+  end
+
+  return team_results
+end
+
 def run_event(event_key, stat)
   if !event_key
       raise "No event key"
@@ -82,9 +101,7 @@ def run_event(event_key, stat)
     return File.open(cache_file_name) { |f| JSON.load(f) }
   else
     print(".")
-    if stat == "climb"
-      team_scores = run_climb(matches)
-    elsif stat == "amplified_note_ratio"
+    if stat == "amplified_note_ratio"
       team_scores = run_amplified_note_ratio(event_key)
     elsif stat == "endgame_stats"
       team_scores = run_endgame_stats(matches)
@@ -165,41 +182,6 @@ def run_amplified_note_ratio(event_key)
 
   return result_scores
 end
-
-def run_climb(matches)
-  team_info = {}
-
-  matches.each do |match|
-    next if !match['actual_time']
-
-    team1, team2, team3 = match["alliances"]["blue"]["team_keys"].map { |key| key.sub('frc', '') }
-    team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
-
-    [team1, team2, team3, team4, team5, team6].each do |team|
-      team_info[team] = {"total"=> 0, "count"=> 0} if !team_info.key?(team)
-    end
-
-    team_info[team1]["total"] += 1 if !["Parked", "None"].include?(match["score_breakdown"]["blue"]["endGameRobot1"])
-    team_info[team2]["total"] += 1 if !["Parked", "None"].include?(match["score_breakdown"]["blue"]["endGameRobot2"])
-    team_info[team3]["total"] += 1 if !["Parked", "None"].include?(match["score_breakdown"]["blue"]["endGameRobot3"])
-    team_info[team4]["total"] += 1 if !["Parked", "None"].include?(match["score_breakdown"]["red"]["endGameRobot1"])
-    team_info[team5]["total"] += 1 if !["Parked", "None"].include?(match["score_breakdown"]["red"]["endGameRobot2"])
-    team_info[team6]["total"] += 1 if !["Parked", "None"].include?(match["score_breakdown"]["red"]["endGameRobot3"])
-
-    [team1, team2, team3, team4, team5, team6].each do |team|
-      team_info[team]["count"] += 1
-    end
-
-  end
-
-  team_scores = {}
-  team_info.each do |team_num, team_data|
-    team_scores[team_num] = {"score" => team_data["total"].to_f / team_data["count"]}
-  end
-
-  return team_scores
-end
-
 
 def run_iteration(stat, team_scores, matches)
   iteration_team_scores = {}
@@ -282,15 +264,16 @@ def run_iteration(stat, team_scores, matches)
   team_scores
 end
 
-def get_teams_last_event()
+def get_teams_last_event(event_key)
+  # ignore championship events with very few matches
   unusable_events = ["2024txcmp", "2024micmp", "2024necmp", "2024oncmp"]
 
-  cache_file_name = "cache/last_event_cache_#{ARGV[0]}.json"
+  cache_file_name = "cache/last_event_cache_#{event_key}.json"
   if File.exists?(cache_file_name)
     return File.open(cache_file_name) { |f| JSON.load(f) }
   end
 
-  team_keys = get_team_keys()
+  team_keys = get_team_keys(event_key)
 
   team_last_event_map = {}
   team_keys.each do |team_key|
@@ -299,7 +282,6 @@ def get_teams_last_event()
     filtered_matches = filtered_matches.reject { |match| unusable_events.include?(match["event_key"]) }
     most_recent_match = filtered_matches.max_by { |match| match["actual_time"] }
     team_last_event_map[team_key] = most_recent_match["event_key"]
-    #puts "#{team_key}: #{most_recent_match['event_key']}"
     print('.')
   end
 
@@ -310,23 +292,9 @@ def get_teams_last_event()
   return team_last_event_map
 end
 
-def get_team_keys()
-  teams = query("event/#{ARGV[0]}/teams")
+def get_team_keys(event_key)
+  teams = query("event/#{event_key}/teams")
   return teams.map{ |team| team["key"] }
-end
-
-def get_prev_teams_stats(stat)
-  team_last_events = get_teams_last_event()
-
-  team_results = {}
-
-  team_last_events.each do |team_key, event_key|
-    team_number = team_key.sub('frc', '')
-    event_results = run_event(event_key, stat)
-    team_results[team_number] = event_results[team_number]
-  end
-
-  return team_results
 end
 
 # repopulate this cache each run
@@ -437,17 +405,9 @@ def handle_choice(choice)
 
   case choice
   when *choice_map.keys
-    if use_prev_event_data
-      pprint(get_prev_teams_stats(choice_map[choice]))
-    else
-      pprint(run_event(event_key, choice_map[choice]))
-    end
+    pprint(get_stats(event_key, choice_map[choice], use_prev_event_data))
   when "8"
-    if use_prev_event_data
-      endgame_stats = get_prev_teams_stats("endgame_stats")
-    else
-      endgame_stats = run_event(event_key, "endgame_stats")
-    end
+    endgame_stats = get_stats(event_key, "endgame_stats", use_prev_event_data)
 
     sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
         -(hash["climbed_count"].to_f / hash["match_count"].to_f)
@@ -455,11 +415,7 @@ def handle_choice(choice)
 
     print_endgame_stats(sorted_endgame_stats)
   when "9"
-    if use_prev_event_data
-      endgame_stats = get_prev_teams_stats("endgame_stats")
-    else
-      endgame_stats = run_event(event_key, "endgame_stats")
-    end
+    endgame_stats = get_stats(event_key, "endgame_stats", use_prev_event_data)
 
     sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
       if hash["climbed_count"].to_f == 0
@@ -471,19 +427,11 @@ def handle_choice(choice)
 
     print_endgame_stats(sorted_endgame_stats)
   when "10"
-    if use_prev_event_data
-      total_note_scores = get_prev_teams_stats("total_notes")
-    else
-      total_note_scores = run_event(event_key, "total_notes")
-    end
+    total_note_scores = get_stats(event_key, "total_notes", use_prev_event_data)
 
     run_match_forecast(event_key, total_note_scores)
   when "11"
-    if use_prev_event_data
-      eps_scores = get_prev_teams_stats("eps")
-    else
-      eps_scores = run_event(event_key, "eps")
-    end
+    eps_scores = get_stats(event_key, "eps", use_prev_event_data)
 
     run_match_forecast(event_key, eps_scores)
   when "c"
