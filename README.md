@@ -50,7 +50,7 @@ team 	 matches 	 nothing 	 parked 	 climbed/match 		 trapped/climb
 
 10. **Match Num Pieces Forecast** - looks a schedule and estimates the total notes count.
    - once Hopper schedule is released, you can do "ruby rankings.rb 2024hop prev"
-   - you can also try "ruby rankings.rb 2024cabe"
+   - before that, you can try "ruby rankings.rb 2024cabe"
    - this might be useful info in determining if we want to ask for coopertition
 <details> 
   <summary>example</summary>
@@ -67,13 +67,13 @@ team 	 matches 	 nothing 	 parked 	 climbed/match 		 trapped/climb
 2024cabe_qm19:   	 7 	- 21     	(7137 5430 8045) - (7245 9609 581)
   </pre>
 </details>
-11. **Match Score Forecast** - similar to what statbotics does (except they use epa)
+
+11. **Match Score Forecast** - similar to what statbotics does (except they use epa) - TODO add opponent foul points
 
 ### Other ideas
-1. Can easily do shares of Auto/Teleop/Endgame points, but won't be too different from what statbotics/epa has already
-2. Can see where on the stage people climbed, but this doesn't seem useful
-3. Can see who can get the 2-pt mobility in auto, but not sure that's too useful
-4. A lot more complicated, but based on the calculated Point Share, we can go back to the match data again and see how the other alliance did compared to their expected.. this might give us Defense Efficiency
+1. Can see where on the stage people climbed, but this doesn't seem useful
+2. Can see who can get the 2-pt mobility in auto, but not sure that's too useful
+3. A lot more complicated, but based on the calculated Point Share, we can go back to the match data again and see how the other alliance did compared to their expected.. this might give us Defense Efficiency
 
 ### Available data from TBA match api
 ```
