@@ -415,7 +415,7 @@ def print_endgame_stats(sorted_endgame_stats)
   sorted_endgame_stats.each do |team_id, stat|
     climbed_perc = (stat["climbed_count"].to_f / stat["match_count"]).round(2)
     trapped_perc = (stat["trapped_count"].to_f / stat["climbed_count"]).round(2)
-    puts "#{team_id}: \t #{stat['match_count']} \t\t #{stat['none_count']} \t\t #{stat['parked_count']} \t\t #{stat['climbed_count']}\t(#{climbed_perc}) \t\t #{stat['trapped_count']}\t(#{trapped_perc})"
+    puts "#{team_id} \t #{stat['match_count']} \t\t #{stat['none_count']} \t\t #{stat['parked_count']} \t\t #{stat['climbed_count']}\t(#{climbed_perc}) \t\t #{stat['trapped_count']}\t(#{trapped_perc})"
   end
 end
 
