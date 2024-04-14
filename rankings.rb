@@ -86,6 +86,8 @@ def run_event(event_key, stat)
       team_scores = run_climb(matches)
     elsif stat == "amplified_note_ratio"
       team_scores = run_amplified_note_ratio(event_key)
+    elsif stat == "endgame_stats"
+      team_scores = run_endgame_stats(matches)
     else
       50.times do
         team_scores = run_iteration(stat, team_scores, matches)
@@ -107,6 +109,49 @@ def run_event(event_key, stat)
   end
 
   return team_scores
+end
+
+def run_endgame_stats(matches)
+  team_info = {}
+
+  matches.each do |match|
+    next if !match['actual_time']
+
+    team1, team2, team3 = match["alliances"]["blue"]["team_keys"].map { |key| key.sub('frc', '') }
+    team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
+
+    [team1, team2, team3, team4, team5, team6].each do |team|
+      team_info[team] = {"match_count"=>0, "none_count"=>0, "parked_count"=>0, "climbed_count"=>0, "trapped_count"=>0} if !team_info.key?(team)
+    end
+
+    bot_mappings = {
+      ["blue", "endGameRobot1"] => team1,
+      ["blue", "endGameRobot2"] => team2,
+      ["blue", "endGameRobot3"] => team3,
+      ["red", "endGameRobot1"] => team4,
+      ["red", "endGameRobot2"] => team5,
+      ["red", "endGameRobot3"] => team6,
+    }
+
+    bot_mappings.each do |bot_mapping, team_id|
+      endgame_status = match["score_breakdown"][bot_mapping[0]][bot_mapping[1]]
+      
+      team_info[team_id]["match_count"] += 1
+
+      if endgame_status == "None"
+        team_info[team_id]["none_count"] += 1
+      elsif endgame_status == "Parked"
+        team_info[team_id]["parked_count"] += 1
+      else
+        team_info[team_id]["climbed_count"] += 1
+        if match["score_breakdown"][bot_mapping[0]]["trap#{endgame_status}"]
+          team_info[team_id]["trapped_count"] += 1
+        end
+      end
+    end
+  end
+
+  return team_info
 end
 
 def run_amplified_note_ratio(event_key)
@@ -238,9 +283,10 @@ def run_iteration(stat, team_scores, matches)
 end
 
 def get_teams_last_event()
+  unusable_events = ["2024txcmp", "2024micmp", "2024necmp", "2024oncmp"]
+
   cache_file_name = "cache/last_event_cache_#{ARGV[0]}.json"
   if File.exists?(cache_file_name)
-    puts "Using cached last_event data"
     return File.open(cache_file_name) { |f| JSON.load(f) }
   end
 
@@ -250,6 +296,7 @@ def get_teams_last_event()
   team_keys.each do |team_key|
     matches = query("team/#{team_key}/matches/2024")
     filtered_matches = matches.select { |match| match["actual_time"] }
+    filtered_matches = filtered_matches.reject { |match| unusable_events.include?(match["event_key"]) }
     most_recent_match = filtered_matches.max_by { |match| match["actual_time"] }
     team_last_event_map[team_key] = most_recent_match["event_key"]
     #puts "#{team_key}: #{most_recent_match['event_key']}"
@@ -338,8 +385,9 @@ def display_menu()
   puts "6)  Amplified Note Ratio (amped speaker:unamped+amp)"
   puts "7)  Estimated Penalty Points Share (more is bad)"
   puts "8)  Successful Climb Percentage (exact)"
-  puts "9)  Match Num Pieces Forecast"
-  puts "10) Match Score Forecast"
+  puts "9)  Endgame Stats (counts)"
+  puts "10) Match Num Pieces Forecast"
+  puts "11) Match Score Forecast"
   puts ""
   puts "[c]lear cache"
   puts "[q]uit"
@@ -359,6 +407,18 @@ def run_match_forecast(event_key, team_scores)
     red_total = (team_scores[team4]["score"] + team_scores[team5]["score"] + team_scores[team6]["score"]).round()
 
     puts "#{match["key"]}:   \t #{red_total} \t- #{blue_total}     \t(#{team4} #{team5} #{team6}) - (#{team1} #{team2} #{team3})"
+  end
+end
+
+def print_endgame_stats(endgame_stats)
+  sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
+    -(hash["climbed_count"].to_f / hash["match_count"].to_f)
+  end
+  puts "team \t matches \t nothing \t parked \t climbed \t\t trapped"
+  sorted_endgame_stats.each do |team_id, stat|
+    climbed_perc = (stat["climbed_count"].to_f / stat["match_count"]).round(2)
+    trapped_perc = (stat["trapped_count"].to_f / stat["match_count"]).round(2)
+    puts "#{team_id}: \t #{stat['match_count']} \t\t #{stat['none_count']} \t\t #{stat['parked_count']} \t\t #{stat['climbed_count']}\t(#{climbed_perc}) \t\t #{stat['trapped_count']}\t(#{trapped_perc})"
   end
 end
 
@@ -388,13 +448,20 @@ def handle_choice(choice)
     end
   when "9"
     if use_prev_event_data
+      endgame_stats = get_prev_teams_stats("endgame_stats")
+    else
+      endgame_stats = run_event(event_key, "endgame_stats")
+    end
+    print_endgame_stats(endgame_stats)
+  when "10"
+    if use_prev_event_data
       total_note_scores = get_prev_teams_stats("total_notes")
     else
       total_note_scores = run_event(event_key, "total_notes")
     end
 
     run_match_forecast(event_key, total_note_scores)
-  when "10"
+  when "11"
     if use_prev_event_data
       eps_scores = get_prev_teams_stats("eps")
     else
