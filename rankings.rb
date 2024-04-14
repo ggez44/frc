@@ -384,8 +384,8 @@ def display_menu()
   puts "5)  Teleop Notes"
   puts "6)  Amplified Note Ratio (amped speaker:unamped+amp)"
   puts "7)  Estimated Penalty Points Share (more is bad)"
-  puts "8)  Successful Climb Percentage (exact)"
-  puts "9)  Endgame Stats (counts)"
+  puts "8)  Endgame Stats (sorted by climbed/match)"
+  puts "9)  Endgame Stats (sorted by trapped/climb)"
   puts "10) Match Num Pieces Forecast"
   puts "11) Match Score Forecast"
   puts ""
@@ -410,14 +410,11 @@ def run_match_forecast(event_key, team_scores)
   end
 end
 
-def print_endgame_stats(endgame_stats)
-  sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
-    -(hash["climbed_count"].to_f / hash["match_count"].to_f)
-  end
-  puts "team \t matches \t nothing \t parked \t climbed \t\t trapped"
+def print_endgame_stats(sorted_endgame_stats)
+  puts "team \t matches \t nothing \t parked \t climbed/match \t\t trapped/climb"
   sorted_endgame_stats.each do |team_id, stat|
     climbed_perc = (stat["climbed_count"].to_f / stat["match_count"]).round(2)
-    trapped_perc = (stat["trapped_count"].to_f / stat["match_count"]).round(2)
+    trapped_perc = (stat["trapped_count"].to_f / stat["climbed_count"]).round(2)
     puts "#{team_id}: \t #{stat['match_count']} \t\t #{stat['none_count']} \t\t #{stat['parked_count']} \t\t #{stat['climbed_count']}\t(#{climbed_perc}) \t\t #{stat['trapped_count']}\t(#{trapped_perc})"
   end
 end
@@ -434,25 +431,45 @@ def handle_choice(choice)
     "5" => "teleop_notes",
     "6" => "amplified_note_ratio",
     "7" => "epps",
-    "8" => "climb",
   }
 
   event_key = ARGV[0]
 
   case choice
-  when "1", "2", "3", "4", "5", "6", "7", "8"
+  when *choice_map.keys
     if use_prev_event_data
       pprint(get_prev_teams_stats(choice_map[choice]))
     else
       pprint(run_event(event_key, choice_map[choice]))
     end
+  when "8"
+    if use_prev_event_data
+      endgame_stats = get_prev_teams_stats("endgame_stats")
+    else
+      endgame_stats = run_event(event_key, "endgame_stats")
+    end
+
+    sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
+        -(hash["climbed_count"].to_f / hash["match_count"].to_f)
+    end
+
+    print_endgame_stats(sorted_endgame_stats)
   when "9"
     if use_prev_event_data
       endgame_stats = get_prev_teams_stats("endgame_stats")
     else
       endgame_stats = run_event(event_key, "endgame_stats")
     end
-    print_endgame_stats(endgame_stats)
+
+    sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
+      if hash["climbed_count"].to_f == 0
+        0
+      else
+        -(hash["trapped_count"].to_f / hash["climbed_count"].to_f)
+      end
+    end
+
+    print_endgame_stats(sorted_endgame_stats)
   when "10"
     if use_prev_event_data
       total_note_scores = get_prev_teams_stats("total_notes")
