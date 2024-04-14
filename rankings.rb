@@ -330,18 +330,18 @@ def display_menu()
   end
   puts "#\n###################################################################"
   puts "\n"
-  puts "1) Estimated Points Share (sans fouls)"
-  puts "2) EPS vs Week Comp"
-  puts "3) Total Notes"
-  puts "4) Auto Notes"
-  puts "5) Teleop Notes"
-  puts "6) Amplified Note Ratio (amped speaker:unamped+amp)"
-  puts "7) Estimated Penalty Points Share (more is bad)"
-  puts "8) Successful Climb Percentage (exact)"
-  puts "9) Match Num Pieces Forecast"
-  puts "a) Match Score Forecast"
+  puts "1)  Estimated Points Share (sans fouls)"
+  puts "2)  EPS vs Week Comp"
+  puts "3)  Total Notes"
+  puts "4)  Auto Notes"
+  puts "5)  Teleop Notes"
+  puts "6)  Amplified Note Ratio (amped speaker:unamped+amp)"
+  puts "7)  Estimated Penalty Points Share (more is bad)"
+  puts "8)  Successful Climb Percentage (exact)"
+  puts "9)  Match Num Pieces Forecast"
+  puts "10) Match Score Forecast"
   puts ""
-  puts "[x]lear cache"
+  puts "[c]lear cache"
   puts "[q]uit"
   puts ""
   print "Enter choice: "
@@ -402,7 +402,7 @@ def handle_choice(choice)
     end
 
     run_match_forecast(event_key, eps_scores)
-  when "x"
+  when "c"
     FileUtils.rm_rf("cache")
     FileUtils.mkdir_p("cache")
   end
