@@ -9,7 +9,9 @@
 - `ruby rankings.rb 2024cur`
   - shows stats for how teams are doing in Curie Division (no data yet)
 - `ruby rankings.rb 2024cafr prev`
-  - technically possible to see how the teams of SFR did in their last completed event
+  - technically possible to see how the teams of CVR did in their last completed event
+- `ruby rankings.rb 2024cabe`
+  - adding "prev" at the end yields the same results as cabe is week6 and currently that'd be the last match for everyone in cabe
 
 1. **Estimated Points Share** 
    - Penalty points are removed
