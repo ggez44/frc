@@ -27,6 +27,27 @@
    - Note: The Blue Alliance insights tab has foul points, but it's based on what your own alliance received for points which is meaningless.
 8. **Endgame Stats - climb** - gives full endgame stats, ordered by climbs/match (exact counts, not estimates)
 9. **Endgame Stats - trap** - gives full endgame stats, ordered by traps/climb (exact counts, not estimates)
+<details>
+  <summary>example</summary>
+  <pre>
+team 	 matches 	 nothing 	 parked 	 climbed/match 		 trapped/climb
+3494 	 14 		 1 		 1 		 12	(0.86) 		 12	(1.0)
+6328 	 15 		 0 		 2 		 13	(0.87) 		 12	(0.92)
+5940 	 15 		 0 		 2 		 13	(0.87) 		 12	(0.92)
+3310 	 18 		 1 		 6 		 11	(0.61) 		 10	(0.91)
+8013 	 20 		 2 		 3 		 15	(0.75) 		 13	(0.87)
+4270 	 18 		 1 		 3 		 14	(0.78) 		 12	(0.86)
+4909 	 14 		 0 		 5 		 9	(0.64) 		 7	(0.78)
+88 	 16 		 2 		 5 		 9	(0.56) 		 7	(0.78)
+2046 	 15 		 2 		 6 		 7	(0.47) 		 5	(0.71)
+3546 	 16 		 2 		 4 		 10	(0.63) 		 6	(0.6)
+4414 	 15 		 2 		 1 		 12	(0.8) 		 7	(0.58)
+192 	 19 		 1 		 5 		 13	(0.68) 		 4	(0.31)
+302 	 14 		 0 		 4 		 10	(0.71) 		 3	(0.3)
+1218 	 15 		 0 		 1 		 14	(0.93) 		 2	(0.14)
+  </pre>
+</details>
+
 10. **Match Num Pieces Forecast** - looks a schedule and estimates the total notes count.
    - once Hopper schedule is released, you can do "ruby rankings.rb 2024hop prev"
    - you can also try "ruby rankings.rb 2024cabe"
