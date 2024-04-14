@@ -93,7 +93,7 @@ This version has 3 options..
    - once Hopper schedule is released, you can do "ruby rankings.rb 2024hop prev"
    - you can also try "ruby rankings.rb 2024cabe"
    - this might be useful info in determining if we want to ask for coopertition
-a. **Match Score Forecast** - similar to what statbotics does (except they use epa)
+10. **Match Score Forecast** - similar to what statbotics does (except they use epa)
 
 ### Other ideas
 1. Can easily do shares of Auto/Teleop/Endgame points, but won't be too different from what statbotics/epa has already

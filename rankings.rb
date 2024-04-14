@@ -394,7 +394,7 @@ def handle_choice(choice)
     end
 
     run_match_forecast(event_key, total_note_scores)
-  when "a"
+  when "10"
     if use_prev_event_data
       eps_scores = get_prev_teams_stats("eps")
     else
