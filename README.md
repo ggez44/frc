@@ -31,7 +31,9 @@
    - once Hopper schedule is released, you can do "ruby rankings.rb 2024hop prev"
    - you can also try "ruby rankings.rb 2024cabe"
    - this might be useful info in determining if we want to ask for coopertition
-   - <details> <summary>example</summary>
+<details> 
+  <summary>example</summary>
+  <pre>
 2024cabe_qm10:   	 13 	- 12     	(7419 8852 5430) - (8045 199 4159)
 2024cabe_qm11:   	 14 	- 32     	(4255 751 6418) - (2288 5419 6619)
 2024cabe_qm12:   	 10 	- 15     	(9470 9519 6814) - (766 1160 5985)
@@ -42,7 +44,8 @@
 2024cabe_qm17:   	 16 	- 11     	(8159 2637 8852) - (7419 9545 9634)
 2024cabe_qm18:   	 14 	- 14     	(4904 8793 199) - (4669 4990 3045)
 2024cabe_qm19:   	 7 	- 21     	(7137 5430 8045) - (7245 9609 581)
-   </details>
+  </pre>
+</details>
 11. **Match Score Forecast** - similar to what statbotics does (except they use epa)
 
 ### Other ideas
