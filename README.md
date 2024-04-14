@@ -4,14 +4,13 @@
 ### Usage
 - `ruby rankings.rb 2024cabe`
   - shows stats for 2024cabe teams and how they did in 2024cabe matches
+  - adding "prev" at the end yields the same results as cabe is week6 and currently that'd be the last match for everyone in cabe
 - `ruby rankings.rb 2024hop prev`
   - shows stats for 2024hop teams and how each did in their latest event matches
 - `ruby rankings.rb 2024cur`
   - shows stats for how teams are doing in Curie Division (no data yet)
 - `ruby rankings.rb 2024cafr prev`
   - technically possible to see how the teams of CVR did in their last completed event
-- `ruby rankings.rb 2024cabe`
-  - adding "prev" at the end yields the same results as cabe is week6 and currently that'd be the last match for everyone in cabe
 
 1. **Estimated Points Share** 
    - Penalty points are removed
