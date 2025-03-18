@@ -238,6 +238,12 @@ def run_iteration(stat, team_scores, matches)
     when "eps", 'eps_v_comp'
       blue_score = match["score_breakdown"]["blue"]["totalPoints"] - match["score_breakdown"]["blue"]["foulPoints"]
       red_score = match["score_breakdown"]["red"]["totalPoints"] - match["score_breakdown"]["red"]["foulPoints"]
+    when "wall_algae_count"
+      blue_score = match["score_breakdown"]["blue"]["wallAlgaeCount"]
+      red_score = match["score_breakdown"]["red"]["wallAlgaeCount"]
+    when "net_algae_count"
+      blue_score = match["score_breakdown"]["blue"]["netAlgaeCount"]
+      red_score = match["score_breakdown"]["red"]["netAlgaeCount"]
     when "teleop_trough_count"
       blue_score = match["score_breakdown"]["blue"]["teleopReef"]["trough"]
       red_score = match["score_breakdown"]["red"]["teleopReef"]["trough"]
@@ -376,6 +382,8 @@ def display_menu()
   puts "4)  Foul Points Committed"
   puts "5)  Auto Leave %"
   puts "6)  Deep Cage %"
+  puts "7)  Wall Algae Count"
+  puts "8)  Net Algae Count"
   puts ""
   puts "[w]eekly average scores"
   puts "[c]lear cache"
@@ -410,6 +418,8 @@ def handle_choice(choice)
     "4" => "foul_points_committed",
     "5" => "auto_leave",
     "6" => "deepcage",
+    "7" => "wall_algae_count",
+    "8" => "net_algae_count",
   }
 
   event_key = ARGV[0]
