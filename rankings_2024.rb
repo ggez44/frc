@@ -7,6 +7,7 @@ require 'json'
 require 'byebug'
 
 API_KEY = "bUdXNYQIL7C5HYLSX966jAqfpmjbzocnaCoTdABBsOaHFAuyyid781XDRxwOrZD4"
+GLOBAL_GOOD_TRAPS = {}
 
 def query(path, params = {})
   3.times do |i|
@@ -102,9 +103,9 @@ def run_event(event_key, stat)
     return File.open(cache_file_name) { |f| JSON.load(f) }
   else
     print(".")
-    if stat == "auto_leave"
-      team_scores = run_auto_stats(matches)
-    elsif stat == "deepcage"
+    if stat == "amplified_note_ratio"
+      team_scores = run_amplified_note_ratio(event_key)
+    elsif stat == "endgame_stats"
       team_scores = run_endgame_stats(matches)
     else
       50.times do
@@ -139,88 +140,55 @@ def run_endgame_stats(matches)
     team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
 
     [team1, team2, team3, team4, team5, team6].each do |team|
-      team_info[team] = {"match_count"=>0, "deepcage_count"=>0, "no_climbs"=>[]} if !team_info.key?(team)
+      team_info[team] = {"match_count"=>0, "none_count"=>0, "parked_count"=>0, "climbed_count"=>0, "trapped_count"=>0} if !team_info.key?(team)
     end
 
     bot_mappings = {
-      ["blue", "1"] => team1,
-      ["blue", "2"] => team2,
-      ["blue", "3"] => team3,
-      ["red", "1"] => team4,
-      ["red", "2"] => team5,
-      ["red", "3"] => team6,
+      ["blue", "endGameRobot1"] => team1,
+      ["blue", "endGameRobot2"] => team2,
+      ["blue", "endGameRobot3"] => team3,
+      ["red", "endGameRobot1"] => team4,
+      ["red", "endGameRobot2"] => team5,
+      ["red", "endGameRobot3"] => team6,
     }
 
-    mapping_str = "endGameRobot" 
     bot_mappings.each do |bot_mapping, team_id|
+      endgame_status = match["score_breakdown"][bot_mapping[0]][bot_mapping[1]]
+      
       team_info[team_id]["match_count"] += 1
-      if match["score_breakdown"][bot_mapping[0]][mapping_str + bot_mapping[1]] == "DeepCage"
-        team_info[team_id]["deepcage_count"] += 1
+
+      if endgame_status == "None"
+        team_info[team_id]["none_count"] += 1
+      elsif endgame_status == "Parked"
+        team_info[team_id]["parked_count"] += 1
       else
-        team_info[team_id]["no_climbs"].append(match["key"])
+        team_info[team_id]["climbed_count"] += 1
+        if match["score_breakdown"][bot_mapping[0]]["trap#{endgame_status}"]
+          team_info[team_id]["trapped_count"] += 1
+
+          if !GLOBAL_GOOD_TRAPS.keys.include?(team_id)
+            GLOBAL_GOOD_TRAPS[team_id] = []
+          end
+          GLOBAL_GOOD_TRAPS[team_id] << "https://www.thebluealliance.com/match/#{match["key"]}"
+        end
       end
     end
-  end
-
-  team_info.each do |team, data|
-    team_info[team]["score"] = team_info[team]["deepcage_count"].to_f / team_info[team]["match_count"]
-  end
-
-  idx=0
-  team_info.sort_by { |team, score| score["score"] }.reverse.each do |team, score|
-    puts "#{idx+=1}. #{team} - #{score["score"].round(2)} bad:#{tids(team_info[team]['no_climbs'])}"
   end
 
   return team_info
 end
 
-def run_auto_stats(matches)
-  team_info = {}
+def run_amplified_note_ratio(event_key)
+  amplified_note_scores = run_event(event_key, "amplified_notes")
+  unamplified_note_scores = run_event(event_key, "unamplified_notes")
 
-  matches.each do |match|
-    next if !match['actual_time']
-
-    team1, team2, team3 = match["alliances"]["blue"]["team_keys"].map { |key| key.sub('frc', '') }
-    team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
-
-    [team1, team2, team3, team4, team5, team6].each do |team|
-      team_info[team] = {"match_count"=>0, "good_autos"=>[], "bad_autos"=>[], "leave_count"=>0} if !team_info.key?(team)
-    end
-
-    bot_mappings = {
-      ["blue", "1"] => team1,
-      ["blue", "2"] => team2,
-      ["blue", "3"] => team3,
-      ["red", "1"] => team4,
-      ["red", "2"] => team5,
-      ["red", "3"] => team6,
-    }
-
-    mapping_str = "autoLineRobot" 
-    bot_mappings.each do |bot_mapping, team_id|
-      team_info[team_id]["match_count"] += 1
-      if match["score_breakdown"][bot_mapping[0]][mapping_str + bot_mapping[1]] == "Yes"
-        team_info[team_id]["good_autos"].append(match["key"])
-        team_info[team_id]["leave_count"] += 1
-      else
-        team_info[team_id]["bad_autos"].append(match["key"])
-      end
-    end
+  result_scores = {}
+  amplified_note_scores.each do |team, score_hash|
+    result_scores[team] = {"score" => amplified_note_scores[team]["score"] / unamplified_note_scores[team]["score"]}
   end
 
-  team_info.each do |team, data|
-    team_info[team]["score"] = team_info[team]["leave_count"].to_f / team_info[team]["match_count"]
-  end
-
-  idx=0
-  team_info.sort_by { |team, score| score["score"] }.reverse.each do |team, score|
-    puts "#{idx+=1}. #{team} - #{score["score"].round(2)} bad:#{tids(team_info[team]['bad_autos'])}"
-  end
-
-
-  return team_info
+  return result_scores
 end
-
 
 def run_iteration(stat, team_scores, matches)
   iteration_team_scores = {}
@@ -236,12 +204,28 @@ def run_iteration(stat, team_scores, matches)
       
     case stat
     when "eps", 'eps_v_comp'
-      blue_score = match["score_breakdown"]["blue"]["totalPoints"] - match["score_breakdown"]["blue"]["foulPoints"]
-      red_score = match["score_breakdown"]["red"]["totalPoints"] - match["score_breakdown"]["red"]["foulPoints"]
-    when "teleop_trough_count"
-      blue_score = match["score_breakdown"]["blue"]["teleopReef"]["trough"]
-      red_score = match["score_breakdown"]["red"]["teleopReef"]["trough"]
-    when "foul_points_committed" 
+      blue_score = match["score_breakdown"]["blue"]["totalPoints"]
+      red_score = match["score_breakdown"]["red"]["totalPoints"]
+    when "total_notes"
+      keys_to_sum = ["autoAmpNoteCount", "autoSpeakerNoteCount", "teleopAmpNoteCount", "teleopSpeakerNoteAmplifiedCount", "teleopSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
+    when "auto_notes"
+      keys_to_sum = ["autoAmpNoteCount", "autoSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
+    when "teleop_notes"
+      keys_to_sum = ["teleopAmpNoteCount", "teleopSpeakerNoteAmplifiedCount", "teleopSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
+    when "amplified_notes"
+      blue_score = match["score_breakdown"]["blue"]["teleopSpeakerNoteAmplifiedCount"]
+      red_score = match["score_breakdown"]["red"]["teleopSpeakerNoteAmplifiedCount"]
+    when "unamplified_notes"
+      keys_to_sum = ["teleopAmpNoteCount", "teleopSpeakerNoteCount"]
+      blue_score = keys_to_sum.sum { |key| match["score_breakdown"]["blue"][key] || 0 }
+      red_score = keys_to_sum.sum { |key| match["score_breakdown"]["red"][key] || 0 }
+    when "epps" 
       # look at opponent alliance foulPoints - TBA looks at own alliance which is meaningless
       blue_score = match["score_breakdown"]["red"]["foulPoints"]
       red_score = match["score_breakdown"]["blue"]["foulPoints"]
@@ -289,7 +273,7 @@ end
 
 def get_teams_last_event(event_key)
   # ignore championship events with very few matches
-  unusable_events = ["2025txcmp", "2025micmp", "2025necmp", "2025oncmp"]
+  unusable_events = ["2024txcmp", "2024micmp", "2024necmp", "2024oncmp"]
 
   cache_file_name = "cache/last_event_cache_#{event_key}.json"
   if File.exists?(cache_file_name)
@@ -300,13 +284,11 @@ def get_teams_last_event(event_key)
 
   team_last_event_map = {}
   team_keys.each do |team_key|
-    matches = query("team/#{team_key}/matches/2025")
+    matches = query("team/#{team_key}/matches/2024")
     filtered_matches = matches.select { |match| match["actual_time"] }
     filtered_matches = filtered_matches.reject { |match| unusable_events.include?(match["event_key"]) }
     most_recent_match = filtered_matches.max_by { |match| match["actual_time"] }
-    if most_recent_match
-      team_last_event_map[team_key] = most_recent_match["event_key"]
-    end
+    team_last_event_map[team_key] = most_recent_match["event_key"]
     print('.')
   end
 
@@ -330,7 +312,7 @@ def get_avg_eps_for_week(week_num)
   end
 
   event_averages = []
-  events = query("events/2025")
+  events = query("events/2024")
   events.each do |event|
     next if event["week"].nil?
     next if event["week"].to_i != week_num.to_i
@@ -355,7 +337,7 @@ def pprint(team_scores)
     puts "No data yet"
   else
     team_scores.sort_by { |team, score| score["score"] }.reverse.each do |team, score|
-      puts "#{idx+=1}. #{team}: #{score["score"].round(2)}"
+      puts "#{idx+=1}. #{team} - #{score["score"].round(2)}"
     end
   end
 end
@@ -372,12 +354,16 @@ def display_menu()
   puts "\n"
   puts "1)  Estimated Points Share (sans fouls)"
   puts "2)  EPS vs Week Comp"
-  puts "3)  Teleop Trough Count"
-  puts "4)  Foul Points Committed"
-  puts "5)  Auto Leave %"
-  puts "6)  Deep Cage %"
+  puts "3)  Total Notes"
+  puts "4)  Auto Notes"
+  puts "5)  Teleop Notes"
+  puts "6)  Amplified Note Ratio (amped speaker:unamped+amp)"
+  puts "7)  Estimated Penalty Points Share (more is bad)"
+  puts "8)  Endgame Stats (sorted by climbed/match)"
+  puts "9)  Endgame Stats (sorted by trapped/climb)"
+  puts "10) Match Num Pieces Forecast"
+  puts "11) Match Score Forecast"
   puts ""
-  puts "[w]eekly average scores"
   puts "[c]lear cache"
   puts "[q]uit"
   puts ""
@@ -399,6 +385,24 @@ def run_match_forecast(event_key, team_scores)
   end
 end
 
+def print_endgame_stats(sorted_endgame_stats)
+  puts "team \t matches \t nothing \t parked \t climbed/match \t\t trapped/climb"
+  sorted_endgame_stats.each do |team_id, stat|
+    climbed_perc = (stat["climbed_count"].to_f / stat["match_count"]).round(2)
+    trapped_perc = (stat["trapped_count"].to_f / stat["climbed_count"]).round(2)
+    puts "#{team_id} \t #{stat['match_count']} \t\t #{stat['none_count']} \t\t #{stat['parked_count']} \t\t #{stat['climbed_count']}\t(#{climbed_perc}) \t\t #{stat['trapped_count']}\t(#{trapped_perc})"
+  end
+
+  sorted_endgame_stats.each do |team_id, stat|
+    team_good_traps = GLOBAL_GOOD_TRAPS[team_id]
+    next if !team_good_traps
+    puts team_id
+    team_good_traps.each do |team_good_trap|
+      puts team_good_trap
+    end
+  end
+end
+
 def handle_choice(choice)
   # if there is a second command line arg of any kind.. we use prev event
   use_prev_event_data = !ARGV[1].nil?
@@ -406,10 +410,11 @@ def handle_choice(choice)
   choice_map = {
     "1" => "eps",
     "2" => "eps_v_comp",
-    "3" => "teleop_trough_count",
-    "4" => "foul_points_committed",
-    "5" => "auto_leave",
-    "6" => "deepcage",
+    "3" => "total_notes",
+    "4" => "auto_notes",
+    "5" => "teleop_notes",
+    "6" => "amplified_note_ratio",
+    "7" => "epps",
   }
 
   event_key = ARGV[0]
@@ -417,13 +422,37 @@ def handle_choice(choice)
   case choice
   when *choice_map.keys
     pprint(get_stats(event_key, choice_map[choice], use_prev_event_data))
+  when "8"
+    endgame_stats = get_stats(event_key, "endgame_stats", use_prev_event_data)
+
+    sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
+        -(hash["climbed_count"].to_f / hash["match_count"].to_f)
+    end
+
+    print_endgame_stats(sorted_endgame_stats)
+  when "9"
+    endgame_stats = get_stats(event_key, "endgame_stats", use_prev_event_data)
+
+    sorted_endgame_stats = endgame_stats.sort_by do |team_id, hash|
+      if hash["climbed_count"].to_f == 0
+        0
+      else
+        -(hash["trapped_count"].to_f / hash["climbed_count"].to_f)
+      end
+    end
+
+    print_endgame_stats(sorted_endgame_stats)
+  when "10"
+    total_note_scores = get_stats(event_key, "total_notes", use_prev_event_data)
+
+    run_match_forecast(event_key, total_note_scores)
+  when "11"
+    eps_scores = get_stats(event_key, "eps", use_prev_event_data)
+
+    run_match_forecast(event_key, eps_scores)
   when "c"
     FileUtils.rm_rf("cache")
     FileUtils.mkdir_p("cache")
-  when "w"
-    puts("Week 1: #{get_avg_eps_for_week(0)}")
-    puts("Week 2: #{get_avg_eps_for_week(1)}")
-    puts("Week 3: #{get_avg_eps_for_week(2)}")
   end
 end
 
@@ -434,15 +463,6 @@ def run_menu()
     display_menu()
     choice = STDIN.gets.chomp
     handle_choice(choice)
-  end
-end
-
-def tids(input)
-  if input.is_a?(Array)
-    res = input.map { |str| str.split('_', 2)[1] }
-    res.sort_by { |res| res[/\d+/].to_i }
-  elsif input.is_a?(String)
-    input.split('_', 2)[1]
   end
 end
 
