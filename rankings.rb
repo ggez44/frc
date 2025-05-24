@@ -129,6 +129,58 @@ def run_event(event_key, stat)
   return team_scores
 end
 
+def run_rp_pct()
+  aggregator_by_team = {}
+  events = query("events/2025")
+  events.each do |event|
+    next if [99,100].include?(event["event_type"])
+    puts(event["key"])
+
+    matches = get_event_matches(event["key"])
+    result = run_rp_pct_event(matches)
+
+    for team_key in result.keys()
+      if aggregator_by_team.key?(team_key)
+        aggregator_by_team[team_key]["match_count"] += result[team_key]["match_count"]
+        aggregator_by_team[team_key]["rp"] += result[team_key]["rp"]
+      else
+        aggregator_by_team[team_key] = result[team_key]
+      end
+    end
+  end
+
+  pp aggregator_by_team.map { |t,d| [t, (d["rp"].to_f/(d["match_count"]*6)).round(4)] }.sort_by { |_,r| -r }
+end
+
+def run_rp_pct_event(matches)
+  team_info = {}
+
+  matches.each do |match|
+    next if !match['actual_time']
+    next if match['comp_level'] != 'qm'
+
+    team1, team2, team3 = match["alliances"]["blue"]["team_keys"].map { |key| key.sub('frc', '') }
+    team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
+
+    [team1, team2, team3, team4, team5, team6].each do |team|
+      if team_info.key?(team)
+        team_info[team]["match_count"] += 1
+      else
+        team_info[team] = {"match_count"=>1, "rp"=>0} if !team_info.key?(team)
+      end
+    end
+
+    [team1, team2, team3].each do |team|
+      team_info[team]["rp"] += match["score_breakdown"]["blue"]["rp"]
+    end
+    [team4, team5, team6].each do |team|
+      team_info[team]["rp"] += match["score_breakdown"]["red"]["rp"]
+    end
+  end
+
+  return team_info
+end
+
 def run_endgame_stats(matches)
   team_info = {}
 
@@ -227,6 +279,8 @@ def run_iteration(stat, team_scores, matches)
 
   matches.each do |match|
     next if !match['actual_time']
+    next if !match['score_breakdown']
+    next if match["key"] == "2025mil_qm92"
 
     team1, team2, team3 = match["alliances"]["blue"]["team_keys"].map { |key| key.sub('frc', '') }
     team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
@@ -238,12 +292,22 @@ def run_iteration(stat, team_scores, matches)
     when "eps", 'eps_v_comp'
       blue_score = match["score_breakdown"]["blue"]["totalPoints"] - match["score_breakdown"]["blue"]["foulPoints"]
       red_score = match["score_breakdown"]["red"]["totalPoints"] - match["score_breakdown"]["red"]["foulPoints"]
+    when "avg_gp"
+      blue_score = match["score_breakdown"]["blue"]["wallAlgaeCount"] + match["score_breakdown"]["blue"]["netAlgaeCount"] + match["score_breakdown"]["blue"]["autoCoralCount"] + match["score_breakdown"]["blue"]["teleopCoralCount"]
+      red_score = match["score_breakdown"]["red"]["wallAlgaeCount"] + match["score_breakdown"]["red"]["netAlgaeCount"] + match["score_breakdown"]["red"]["autoCoralCount"] + match["score_breakdown"]["red"]["teleopCoralCount"]
     when "wall_algae_count"
       blue_score = match["score_breakdown"]["blue"]["wallAlgaeCount"]
       red_score = match["score_breakdown"]["red"]["wallAlgaeCount"]
     when "net_algae_count"
       blue_score = match["score_breakdown"]["blue"]["netAlgaeCount"]
       red_score = match["score_breakdown"]["red"]["netAlgaeCount"]
+      if blue_score > 16 || red_score > 16
+          puts match["key"]
+          puts "net: #{match["id"]} #{blue_score} vs #{red_score}"
+      end
+    when "total_algae_count"
+      blue_score = match["score_breakdown"]["blue"]["netAlgaeCount"] + match["score_breakdown"]["blue"]["wallAlgaeCount"]
+      red_score = match["score_breakdown"]["red"]["netAlgaeCount"] + match["score_breakdown"]["red"]["wallAlgaeCount"]
     when "teleop_trough_count"
       blue_score = match["score_breakdown"]["blue"]["teleopReef"]["trough"]
       red_score = match["score_breakdown"]["red"]["teleopReef"]["trough"]
@@ -384,6 +448,10 @@ def display_menu()
   puts "6)  Deep Cage %"
   puts "7)  Wall Algae Count"
   puts "8)  Net Algae Count"
+  puts "9)  Total Algae Count"
+  puts "10) Defensive EPS"
+  puts "11) Total GP Avg"
+  puts "12) RP Avg"
   puts ""
   puts "[w]eekly average scores"
   puts "[c]lear cache"
@@ -420,11 +488,17 @@ def handle_choice(choice)
     "6" => "deepcage",
     "7" => "wall_algae_count",
     "8" => "net_algae_count",
+    "9" => "total_algae_count",
+    "10" => "d_eps",
+    "11" => "gp_avg",
+    "12" => "rp_pct",
   }
 
   event_key = ARGV[0]
 
   case choice
+  when "12"
+    run_rp_pct()
   when *choice_map.keys
     pprint(get_stats(event_key, choice_map[choice], use_prev_event_data))
   when "c"
@@ -434,6 +508,9 @@ def handle_choice(choice)
     puts("Week 1: #{get_avg_eps_for_week(0)}")
     puts("Week 2: #{get_avg_eps_for_week(1)}")
     puts("Week 3: #{get_avg_eps_for_week(2)}")
+    puts("Week 4: #{get_avg_eps_for_week(3)}")
+    puts("Week 5: #{get_avg_eps_for_week(4)}")
+    puts("Week 6: #{get_avg_eps_for_week(5)}")
   end
 end
 
