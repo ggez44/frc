@@ -238,7 +238,7 @@ def run_endgame_tower_stats(matches)
     team4, team5, team6 = match["alliances"]["red"]["team_keys"].map { |key| key.sub('frc', '') }
 
     [team1, team2, team3, team4, team5, team6].each do |team|
-      team_info[team] = {"match_count"=>0, "none_count"=>0, "level1_count"=>0, "level2_count"=>0, "level3_count"=>0, "no_climbs"=>[]} if !team_info.key?(team)
+      team_info[team] = {"match_count"=>0, "none_count"=>0, "level1_count"=>0, "level2_count"=>0, "level3_count"=>0, "no_climbs"=>[], "level1_matches"=>[], "level2_matches"=>[], "level3_matches"=>[]} if !team_info.key?(team)
     end
 
     bot_mappings = {
@@ -259,10 +259,13 @@ def run_endgame_tower_stats(matches)
         team_info[team_id]["no_climbs"] << match["key"]
       when "Level1"
         team_info[team_id]["level1_count"] += 1
+        team_info[team_id]["level1_matches"] << match["key"]
       when "Level2"
         team_info[team_id]["level2_count"] += 1
+        team_info[team_id]["level2_matches"] << match["key"]
       when "Level3"
         team_info[team_id]["level3_count"] += 1
+        team_info[team_id]["level3_matches"] << match["key"]
       end
     end
   end
@@ -272,12 +275,22 @@ def run_endgame_tower_stats(matches)
     team_info[team]["score"] = climbed.to_f / data["match_count"]
   end
 
-  idx = 0
+  sorted = team_info.sort_by { |_, d| -d["score"] }
+
   puts "team \t matches \t none \t L1 \t L2 \t L3 \t climb%"
-  team_info.sort_by { |_, d| -d["score"] }.each do |team, data|
+  sorted.each do |team, data|
     climbed = data["level1_count"] + data["level2_count"] + data["level3_count"]
     pct = data["score"].round(2)
     puts "#{team} \t #{data['match_count']} \t\t #{data['none_count']} \t #{data['level1_count']} \t #{data['level2_count']} \t #{data['level3_count']} \t #{pct}"
+  end
+
+  puts "\n--- Climb details by team ---"
+  sorted.each do |team, data|
+    next if data["level1_matches"].empty? && data["level2_matches"].empty? && data["level3_matches"].empty?
+    puts "#{team}:"
+    puts "  L1: #{tids(data['level1_matches']).join(', ')}" if data["level1_count"] > 0
+    puts "  L2: #{tids(data['level2_matches']).join(', ')}" if data["level2_count"] > 0
+    puts "  L3: #{tids(data['level3_matches']).join(', ')}" if data["level3_count"] > 0
   end
 
   return team_info
@@ -310,15 +323,9 @@ def run_iteration(stat, team_scores, matches)
     when "total_fuel"
       blue_score = match["score_breakdown"]["blue"]["hubScore"]["totalCount"]
       red_score = match["score_breakdown"]["red"]["hubScore"]["totalCount"]
-    when "auto_tower_pts"
-      blue_score = match["score_breakdown"]["blue"]["autoTowerPoints"]
-      red_score = match["score_breakdown"]["red"]["autoTowerPoints"]
-    when "endgame_tower_pts"
-      blue_score = match["score_breakdown"]["blue"]["endGameTowerPoints"]
-      red_score = match["score_breakdown"]["red"]["endGameTowerPoints"]
     when "total_tower_pts"
-      blue_score = match["score_breakdown"]["blue"]["totalTowerPoints"]
-      red_score = match["score_breakdown"]["red"]["totalTowerPoints"]
+      blue_score = match["score_breakdown"]["blue"]["autoTowerPoints"] + match["score_breakdown"]["blue"]["endGameTowerPoints"]
+      red_score = match["score_breakdown"]["red"]["autoTowerPoints"] + match["score_breakdown"]["red"]["endGameTowerPoints"]
     when "foul_points_committed"
       # look at opponent alliance foulPoints - TBA looks at own alliance which is meaningless
       blue_score = match["score_breakdown"]["red"]["foulPoints"]
@@ -453,13 +460,11 @@ def display_menu()
   puts "3)  Auto Fuel Count"
   puts "4)  Teleop Fuel Count"
   puts "5)  Total Fuel Count"
-  puts "6)  Auto Tower Points"
-  puts "7)  Endgame Tower Points"
-  puts "8)  Total Tower Points"
-  puts "9)  Foul Points Committed"
-  puts "10) Auto Tower Climb Stats (per robot)"
-  puts "11) Endgame Tower Climb Stats (per robot)"
-  puts "12) RP Avg"
+  puts "6)  Total Tower Points (auto + endgame)"
+  puts "7)  Foul Points Committed"
+  puts "8)  Auto Tower Climb Stats (per robot)"
+  puts "9)  Endgame Tower Climb Stats (per robot)"
+  puts "10) RP Avg"
   puts ""
   puts "[w]eekly average scores"
   puts "[c]lear cache"
@@ -491,22 +496,20 @@ def handle_choice(choice)
     "3" => "auto_fuel",
     "4" => "teleop_fuel",
     "5" => "total_fuel",
-    "6" => "auto_tower_pts",
-    "7" => "endgame_tower_pts",
-    "8" => "total_tower_pts",
-    "9" => "foul_points_committed",
+    "6" => "total_tower_pts",
+    "7" => "foul_points_committed",
   }
 
   event_key = ARGV[0]
 
   case choice
-  when "12"
+  when "10"
     run_rp_pct()
   when *choice_map.keys
     pprint(get_stats(event_key, choice_map[choice], use_prev_event_data))
-  when "10"
+  when "8"
     get_stats(event_key, "auto_tower", use_prev_event_data)
-  when "11"
+  when "9"
     get_stats(event_key, "endgame_tower", use_prev_event_data)
   when "c"
     FileUtils.rm_rf("cache")
