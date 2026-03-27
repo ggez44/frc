@@ -133,7 +133,8 @@ def run_rp_pct()
   aggregator_by_team = {}
   events = query("events/2025")
   events.each do |event|
-    next if [99,100].include?(event["event_type"])
+    puts "#{event["event_type_string"]} : #{event["event_type"]}"
+    next if [3,4,99,100].include?(event["event_type"])
     puts(event["key"])
 
     matches = get_event_matches(event["key"])
@@ -149,6 +150,7 @@ def run_rp_pct()
     end
   end
 
+  #pp aggregator_by_team.map { |t,d| [t, (d["rp"].to_f/(d["match_count"]*3)).round(4)] }.sort_by { |_,r| -r }
   pp aggregator_by_team.map { |t,d| [t, (d["rp"].to_f/(d["match_count"]*6)).round(4)] }.sort_by { |_,r| -r }
 end
 
@@ -172,9 +174,15 @@ def run_rp_pct_event(matches)
 
     [team1, team2, team3].each do |team|
       team_info[team]["rp"] += match["score_breakdown"]["blue"]["rp"]
+      #team_info[team]["rp"] +=1 if match["score_breakdown"]["blue"]["autoBonusAchieved"]
+      #team_info[team]["rp"] +=1 if match["score_breakdown"]["blue"]["coralBonusAchieved"]
+      #team_info[team]["rp"] +=1 if match["score_breakdown"]["blue"]["bargeBonusAchieved"]
     end
     [team4, team5, team6].each do |team|
       team_info[team]["rp"] += match["score_breakdown"]["red"]["rp"]
+      #team_info[team]["rp"] +=1 if match["score_breakdown"]["red"]["autoBonusAchieved"]
+      #team_info[team]["rp"] +=1 if match["score_breakdown"]["red"]["coralBonusAchieved"]
+      #team_info[team]["rp"] +=1 if match["score_breakdown"]["red"]["bargeBonusAchieved"]
     end
   end
 
