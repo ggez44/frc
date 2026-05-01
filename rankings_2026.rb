@@ -105,7 +105,7 @@ def run_event(event_key, stat)
     if stat == "auto_tower"
       team_scores = run_auto_tower_stats(matches)
     elsif stat == "endgame_tower"
-      team_scores = run_endgame_tower_stats(matches)
+      team_scores = run_endgame_tower_stats(matches, quiet: false)
     else
       50.times do
         team_scores = run_iteration(stat, team_scores, matches)
@@ -228,7 +228,7 @@ def run_auto_tower_stats(matches)
 end
 
 # Per-robot endgame tower climb stats (Level1 / Level2 / Level3)
-def run_endgame_tower_stats(matches)
+def run_endgame_tower_stats(matches, quiet: false)
   team_info = {}
 
   matches.each do |match|
@@ -277,20 +277,22 @@ def run_endgame_tower_stats(matches)
 
   sorted = team_info.sort_by { |_, d| -d["score"] }
 
-  puts "team \t matches \t none \t L1 \t L2 \t L3 \t climb%"
-  sorted.each do |team, data|
-    climbed = data["level1_count"] + data["level2_count"] + data["level3_count"]
-    pct = data["score"].round(2)
-    puts "#{team} \t #{data['match_count']} \t\t #{data['none_count']} \t #{data['level1_count']} \t #{data['level2_count']} \t #{data['level3_count']} \t #{pct}"
-  end
+  unless quiet
+    puts "team \t matches \t none \t L1 \t L2 \t L3 \t climb%"
+    sorted.each do |team, data|
+      climbed = data["level1_count"] + data["level2_count"] + data["level3_count"]
+      pct = data["score"].round(2)
+      puts "#{team} \t #{data['match_count']} \t\t #{data['none_count']} \t #{data['level1_count']} \t #{data['level2_count']} \t #{data['level3_count']} \t #{pct}"
+    end
 
-  puts "\n--- Climb details by team ---"
-  sorted.each do |team, data|
-    next if data["level1_matches"].empty? && data["level2_matches"].empty? && data["level3_matches"].empty?
-    puts "#{team}:"
-    puts "  L1: #{tids(data['level1_matches']).join(', ')}" if data["level1_count"] > 0
-    puts "  L2: #{tids(data['level2_matches']).join(', ')}" if data["level2_count"] > 0
-    puts "  L3: #{tids(data['level3_matches']).join(', ')}" if data["level3_count"] > 0
+    puts "\n--- Climb details by team ---"
+    sorted.each do |team, data|
+      next if data["level1_matches"].empty? && data["level2_matches"].empty? && data["level3_matches"].empty?
+      puts "#{team}:"
+      puts "  L1: #{tids(data['level1_matches']).join(', ')}" if data["level1_count"] > 0
+      puts "  L2: #{tids(data['level2_matches']).join(', ')}" if data["level2_count"] > 0
+      puts "  L3: #{tids(data['level3_matches']).join(', ')}" if data["level3_count"] > 0
+    end
   end
 
   return team_info
@@ -465,12 +467,150 @@ def display_menu()
   puts "8)  Auto Tower Climb Stats (per robot)"
   puts "9)  Endgame Tower Climb Stats (per robot)"
   puts "10) RP Avg"
+  puts "11) Forecast Match Results (unplayed matches)"
+  puts "12) Forecast Match Results (current event + latest event EPS averaged)"
   puts ""
   puts "[w]eekly average scores"
   puts "[c]lear cache"
   puts "[q]uit"
   puts ""
   print "Enter choice: "
+end
+
+def get_team_max_climb(team, endgame_stats)
+  return 0 unless endgame_stats && endgame_stats[team]
+  data = endgame_stats[team]
+  return 3 if data["level3_count"] > 0
+  return 2 if data["level2_count"] > 0
+  return 1 if data["level1_count"] > 0
+  0
+end
+
+def can_alliance_climb_rp?(teams, endgame_stats)
+  # Predict climb RP if at least 2 of 3 robots have ever demonstrated a climb
+  teams.count { |team| get_team_max_climb(team, endgame_stats) > 0 } >= 2
+end
+
+def get_current_rp_totals(event_key)
+  rankings_data = query("event/#{event_key}/rankings")
+  return {} unless rankings_data && rankings_data["rankings"]
+
+  rp_totals = {}
+  rankings_data["rankings"].each do |entry|
+    team = entry["team_key"].sub('frc', '')
+    avg_rp = entry["sort_orders"][0].to_f
+    matches = entry["matches_played"].to_i
+    rp_totals[team] = { "current_rp" => (avg_rp * matches).round, "matches_played" => matches }
+  end
+  rp_totals
+end
+
+def forecast_match_rp(match, team_scores, endgame_stats)
+  t1, t2, t3 = match["alliances"]["blue"]["team_keys"].map { |k| k.sub('frc', '') }
+  t4, t5, t6 = match["alliances"]["red"]["team_keys"].map { |k| k.sub('frc', '') }
+
+  blue_score = [t1, t2, t3].sum { |t| (team_scores.dig(t, "score") || 0) }.round
+  red_score  = [t4, t5, t6].sum { |t| (team_scores.dig(t, "score") || 0) }.round
+
+  if blue_score > red_score
+    blue_rp = 3; red_rp = 0
+  elsif red_score > blue_score
+    blue_rp = 0; red_rp = 3
+  else
+    blue_rp = 1; red_rp = 1
+  end
+
+  blue_rp += 1 if blue_score >= 360
+  blue_rp += 1 if blue_score >= 500
+  red_rp  += 1 if red_score  >= 360
+  red_rp  += 1 if red_score  >= 500
+
+  blue_climb = can_alliance_climb_rp?([t1, t2, t3], endgame_stats)
+  red_climb  = can_alliance_climb_rp?([t4, t5, t6], endgame_stats)
+  blue_rp += 1 if blue_climb
+  red_rp  += 1 if red_climb
+
+  {
+    t1 => blue_rp, t2 => blue_rp, t3 => blue_rp,
+    t4 => red_rp,  t5 => red_rp,  t6 => red_rp,
+    :blue_score => blue_score, :red_score => red_score,
+    :blue_rp => blue_rp, :red_rp => red_rp,
+    :blue_climb => blue_climb, :red_climb => red_climb,
+    :t1 => t1, :t2 => t2, :t3 => t3,
+    :t4 => t4, :t5 => t5, :t6 => t6,
+  }
+end
+
+def run_forecast(event_key, use_prev_event_data: false, use_combined_data: false)
+  print "Computing EPS scores"
+  if use_combined_data
+    current_scores = run_event(event_key, "eps")
+    prev_scores    = get_stats(event_key, "eps", true)
+    all_teams = (current_scores.keys + prev_scores.keys).uniq
+    team_scores = {}
+    all_teams.each do |team|
+      cur  = current_scores.dig(team, "score")
+      prev = prev_scores.dig(team, "score")
+      avg  = if cur && prev then (cur + prev) / 2.0
+             elsif cur      then cur
+             else                prev
+             end
+      team_scores[team] = { "score" => avg }
+    end
+  else
+    team_scores = get_stats(event_key, "eps", use_prev_event_data)
+  end
+  puts ""
+
+  matches = get_event_matches(event_key)
+  endgame_stats = run_endgame_tower_stats(matches, quiet: true)
+
+  unplayed = matches.select { |m| m['comp_level'] == 'qm' && !m['actual_time'] }
+
+  if unplayed.empty?
+    puts "\nNo unplayed qualification matches found."
+    return
+  end
+
+  current_rp = get_current_rp_totals(event_key)
+  forecasted_rp = Hash.new(0)
+
+  puts "\n#{"Match".ljust(8)} #{"Blue".rjust(5)} #{"Red".rjust(5)}  #{"BlRP".rjust(4)} #{"RdRP".rjust(4)}  Blue Alliance vs Red Alliance"
+  puts "-" * 80
+
+  unplayed.sort_by { |m| m['match_number'] }.each do |match|
+    r = forecast_match_rp(match, team_scores, endgame_stats)
+
+    blue_flag = r[:blue_climb] ? "*" : " "
+    red_flag  = r[:red_climb]  ? "*" : " "
+
+    puts "qm#{match['match_number'].to_s.ljust(5)} #{r[:blue_score].to_s.rjust(5)} #{r[:red_score].to_s.rjust(5)}  #{(r[:blue_rp].to_s + blue_flag).rjust(4)} #{(r[:red_rp].to_s + red_flag).rjust(4)}  (#{r[:t1]} #{r[:t2]} #{r[:t3]}) vs (#{r[:t4]} #{r[:t5]} #{r[:t6]})"
+
+    [r[:t1], r[:t2], r[:t3]].each { |t| forecasted_rp[t] += r[:blue_rp] }
+    [r[:t4], r[:t5], r[:t6]].each { |t| forecasted_rp[t] += r[:red_rp] }
+  end
+
+  puts "\n* = climb RP predicted (2-of-3 robots demonstrated climb)"
+  puts "RP: 3 win, 1 each tie, +1 >=360 pts, +1 >=500 pts, +1 climb"
+
+  # Build final standings: current RP + forecasted RP
+  all_teams = (current_rp.keys + forecasted_rp.keys).uniq
+  final_standings = all_teams.map do |team|
+    cur  = current_rp.dig(team, "current_rp") || 0
+    fore = forecasted_rp[team] || 0
+    played = current_rp.dig(team, "matches_played") || 0
+    { "team" => team, "current" => cur, "forecasted" => fore, "total" => cur + fore, "played" => played }
+  end.sort_by { |t| -t["total"] }
+
+  puts "\n=== Projected Final Standings ==="
+  puts "#{"Rank".ljust(5)} #{"Team".ljust(9)} #{"Curr RP".rjust(7)} #{"+ Fore".rjust(7)} #{"= Total".rjust(7)}"
+  puts "-" * 42
+  final_standings.each_with_index do |t, i|
+    climbed = get_team_max_climb(t['team'], endgame_stats) > 0
+    team_label = (t['team'] + (climbed ? "*" : "")).ljust(9)
+    puts "#{(i+1).to_s.ljust(5)} #{team_label} #{t['current'].to_s.rjust(7)} #{t['forecasted'].to_s.rjust(7)} #{t['total'].to_s.rjust(7)}"
+  end
+  puts "\n* = demonstrated climb this event"
 end
 
 def run_match_forecast(event_key, team_scores)
@@ -503,6 +643,10 @@ def handle_choice(choice)
   event_key = ARGV[0]
 
   case choice
+  when "12"
+    run_forecast(event_key, use_combined_data: true)
+  when "11"
+    run_forecast(event_key)
   when "10"
     run_rp_pct()
   when *choice_map.keys
